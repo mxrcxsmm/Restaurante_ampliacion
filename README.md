@@ -20,11 +20,4 @@
 <li>El sistema haurà de permetre visualitzar les ocupacions que s'han realitzat dels recursos, filtrant per recurs i ubicació/sala del recurs, i així veure si un recurs concret s'ha fet servir molt, poc...  </li>
 </ol>
 <hr>
-<h3><strong>MEMBRES DEL GRUP</strong></h3>
-  <ol>
-    <li>Juan Jose Gomez Rosales</li>
-    <li>Julio Cesar Carrillo Rocha</li>
-    <li>Marc Martínez Méndez</li>
-    <li>Marc Colomé Cuenca</li>
-  </ol>
 
