@@ -20,4 +20,10 @@
 <li>El sistema haurà de permetre visualitzar les ocupacions que s'han realitzat dels recursos, filtrant per recurs i ubicació/sala del recurs, i així veure si un recurs concret s'ha fet servir molt, poc...  </li>
 </ol>
 <hr>
+<h3><strong>AMPLIACIÓ</strong></h3>
+<ol>
+<li>una opció de reservar un recurs (cambrers) en un dia i una franja horaria específics</li> 
+<li>una opció de fer un CRUD (per l’administrador de la web) d’usuaris tals com cambrers, gerent, personal manteniment, etc.</li>
+<li>una opció de fer un CRUD (per l’administrador de la web) de recursos tals com sales, taules, cadires, etc.</li>
+</ol>
 
