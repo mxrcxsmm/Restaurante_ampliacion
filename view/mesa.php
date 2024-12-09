@@ -2,15 +2,6 @@
 session_start();
 include_once '../procesos/conexion.php';
 
-// Función auxiliar para determinar la imagen correcta
-function determinarImagenMesa($numSillas, $ocupada) {
-    if ($numSillas <= 2) return $ocupada . "2";
-    if ($numSillas <= 4) return $ocupada . "4";
-    if ($numSillas <= 6) return $ocupada . "6";
-    if ($numSillas <= 8) return $ocupada . "8";
-    return $ocupada . "10";
-}
-
 if (!isset($_SESSION['id_camarero'])) {
     header('location:../index.php');
     exit();
@@ -19,21 +10,17 @@ if (!isset($_SESSION['id_camarero'])) {
 if (!isset($_POST['id_tipoSala'])) {
     header('Location: ./index.php');
     exit();
-} 
+}
 
 try {
     $id = htmlspecialchars(trim($_POST['id_tipoSala']), ENT_QUOTES, 'UTF-8');
     $id_sala = htmlspecialchars(trim($_POST['id_sala']), ENT_QUOTES, 'UTF-8');
     
-    $query = "SELECT m.*, 
-              COALESCE(h.hora_reserva_fin, '00:00:00') as hora_reserva_fin,
-              COALESCE(h.hora_reserva_inicio, '00:00:00') as hora_reserva_inicio
-              FROM mesa m 
-              LEFT JOIN historial h ON m.id_mesa = h.id_mesa 
-                AND h.hora_fin = '0000-00-00 00:00:00'
-              WHERE m.id_sala = ?";
+    $query = "SELECT * FROM mesa WHERE id_sala = :id_sala";
     $stmt = $conn->prepare($query);
-    $stmt->execute([$id_sala]);
+    $stmt->execute([':id_sala' => $id_sala]);
+    
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     if (isset($_SESSION['successOcupat']) && $_SESSION['successOcupat']) {
         unset($_SESSION['successOcupat']);
@@ -47,11 +34,7 @@ try {
         echo "<script>let errorStock = true;</script>";
         unset($_SESSION['errorStock']);
     }
-    if (isset($_SESSION['error'])) {
-        echo "<script>let errorMessage = '" . htmlspecialchars($_SESSION['error']) . "';</script>";
-        unset($_SESSION['error']);
-    }
-    
+
     $numero = $stmt->rowCount();
     $nuevoNumero = 4;
     switch ($numero) {
@@ -74,7 +57,7 @@ try {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="../css/imagenes.css">
         <link rel="stylesheet" href="../css/style.css">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <title>Selecciona una mesa</title>
     </head>
 
@@ -90,76 +73,89 @@ try {
 
         <div class="container">
             <div class="row">
-                <?php
-                while ($fila = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    echo "<div class='col-md-$nuevoNumero mb-4'>";
-                    echo "<div class='container_img'>";
-                    
-                    // Determinar si la mesa está realmente ocupada en este momento
-                    $horaActual = date('H:i:s');
-                    $estaOcupada = $fila['libre'] == 1 && 
-                                  $horaActual >= $fila['hora_reserva_inicio'] && 
-                                  $horaActual <= $fila['hora_reserva_fin'];
-                    
-                    if (!$estaOcupada) {
-                        // Formulario para ocupar mesa
-                        ?>
-                        <form class="formImgComedor" action="../procesos/ocupar_mesa.php" method="POST">
-                            <input type="hidden" name="id_tipoSala" value="<?php echo htmlspecialchars($id) ?>">
-                            <input type="hidden" name="id_mesa" value="<?php echo htmlspecialchars($fila['id_mesa']) ?>">
-                            <input type="hidden" name="id_sala" value="<?php echo htmlspecialchars($fila['id_sala']) ?>">
-                            <input type="hidden" name="num_sillas_real" value="<?php echo htmlspecialchars($fila['num_sillas']) ?>">
-                            <input type="hidden" name="num_sillas" value="<?php echo htmlspecialchars($fila['num_sillas']) ?>">
-                            <button class="botonImg" type="button" onclick="confirmAction(this.form)">
-                                <img class="imagen" src="../img/<?php echo determinarImagenMesa($fila['num_sillas'], 0); ?>.png" alt="">
-                            </button>
-                        </form>
-                        <?php
-                    } else {
-                        // Formulario para desocupar mesa
-                        ?>
-                        <form class="formImgComedor" action="../procesos/desocupar_mesa.php" method="POST">
-                            <input type="hidden" name="id_tipoSala" value="<?php echo htmlspecialchars($id) ?>">
-                            <input type="hidden" name="id_mesa" value="<?php echo htmlspecialchars($fila['id_mesa']) ?>">
-                            <input type="hidden" name="id_sala" value="<?php echo htmlspecialchars($fila['id_sala']) ?>">
-                            <input type="hidden" name="num_sillas_real" value="<?php echo htmlspecialchars($fila['num_sillas']) ?>">
-                            <input type="hidden" name="num_sillas" value="<?php echo htmlspecialchars($fila['num_sillas']) ?>">
-                            <button class="botonImg" type="button" onclick="desocupar(this.form)">
-                                <img class="imagen" src="../img/<?php echo determinarImagenMesa($fila['num_sillas'], 1); ?>.png" alt="">
-                            </button>
-                        </form>
-                        <?php
-                    }
-                    echo "</div>";
-                    echo "<label class='labelTipo'> Nº Sillas: " . htmlspecialchars($fila['num_sillas']) . "</label>";
-                    if ($estaOcupada) {
-                        echo "<br><small>Reservada hasta: " . htmlspecialchars($fila['hora_reserva_fin']) . "</small>";
-                    }
-                    echo "</div>";
-                }
-                ?>
+                <?php foreach ($result as $fila): ?>
+                    <div class='col-md-<?php echo $nuevoNumero; ?> mb-4'>
+                        <div class='container_img'>
+                            <?php if ($fila['libre'] == 0): ?>
+                                <form class="formImgComedor" action="../procesos/ocupar_mesa.php" method="POST">
+                                    <input type="hidden" name="id_tipoSala" value="<?php echo $id ?>">
+                                    <input type="hidden" name="id_mesa" value="<?php echo $fila['id_mesa'] ?>">
+                                    <input type="hidden" name="id_sala" value="<?php echo $fila['id_sala'] ?>">
+                                    <input type="hidden" name="num_sillas_real" value="<?php echo $fila['num_sillas'] ?>">
+                                    <input type="hidden" name="num_sillas" value="<?php echo $fila['num_sillas'] ?>">
+                                    <button class="botonImg" type="button" onclick="confirmAction(this.form)">
+                                        <img class="imagen" src="../img/<?php 
+                                            if ($fila['num_sillas'] <= 2) {
+                                                echo $fila['libre'] . '2';
+                                            } elseif ($fila['num_sillas'] <= 4) {
+                                                echo $fila['libre'] . '4';
+                                            } elseif ($fila['num_sillas'] <= 6) {
+                                                echo $fila['libre'] . '6';
+                                            } elseif ($fila['num_sillas'] <= 8) {
+                                                echo $fila['libre'] . '8';
+                                            } else {
+                                                echo $fila['libre'] . '10';
+                                            }
+                                        ?>.png" alt="Mesa">
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <form class="formImgComedor" action="../procesos/desocupar_mesa.php" method="POST">
+                                    <input type="hidden" name="id_tipoSala" value="<?php echo $id ?>">
+                                    <input type="hidden" name="id_mesa" value="<?php echo $fila['id_mesa'] ?>">
+                                    <input type="hidden" name="id_sala" value="<?php echo $fila['id_sala'] ?>">
+                                    <input type="hidden" name="num_sillas_real" value="<?php echo $fila['num_sillas'] ?>">
+                                    <input type="hidden" name="num_sillas" value="<?php echo $fila['num_sillas'] ?>">
+                                    <button class="botonImg" type="button" onclick="desocupar(this.form)">
+                                        <img class="imagen" src="../img/<?php 
+                                            if ($fila['num_sillas'] <= 2) {
+                                                echo $fila['libre'] . '2';
+                                            } elseif ($fila['num_sillas'] <= 4) {
+                                                echo $fila['libre'] . '4';
+                                            } elseif ($fila['num_sillas'] <= 6) {
+                                                echo $fila['libre'] . '6';
+                                            } elseif ($fila['num_sillas'] <= 8) {
+                                                echo $fila['libre'] . '8';
+                                            } else {
+                                                echo $fila['libre'] . '10';
+                                            }
+                                        ?>.png" alt="Mesa">
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                        <label class='labelTipo'>Nº Sillas: <?php echo $fila['num_sillas']; ?></label>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js" integrity="sha256-1m4qVbsdcSU19tulVTbeQReg0BjZiW6yGffnlr/NJu4=" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
         <script>
             function confirmAction(form) {
                 Swal.fire({
                     title: 'Reservar Mesa',
                     html: `
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label>Número de sillas:</label>
                             <input type="number" id="sillas" class="swal2-input" value="${form.num_sillas.value}" min="2" max="10">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group mb-3">
+                            <label>Fecha:</label>
+                            <input type="date" id="fecha" class="swal2-input" min="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="form-group mb-3">
                             <label>Hora de inicio:</label>
                             <select id="hora_inicio" class="swal2-input">
+                                <option value="">Selecciona hora inicio</option>
                                 ${generateHourOptions(8, 23)}
                             </select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label>Hora de fin:</label>
                             <select id="hora_fin" class="swal2-input">
+                                <option value="">Selecciona hora fin</option>
                                 ${generateHourOptions(9, 24)}
                             </select>
                         </div>
@@ -169,8 +165,14 @@ try {
                     cancelButtonText: 'Cancelar',
                     preConfirm: () => {
                         const sillas = document.getElementById('sillas').value;
+                        const fecha = document.getElementById('fecha').value;
                         const horaInicio = document.getElementById('hora_inicio').value;
                         const horaFin = document.getElementById('hora_fin').value;
+
+                        if (!sillas || !fecha || !horaInicio || !horaFin) {
+                            Swal.showValidationMessage('Todos los campos son obligatorios');
+                            return false;
+                        }
 
                         if (sillas < 2 || sillas > 10) {
                             Swal.showValidationMessage('El número de sillas debe estar entre 2 y 10');
@@ -182,17 +184,36 @@ try {
                             return false;
                         }
 
+                        const fechaActual = new Date();
+                        const fechaSeleccionada = new Date(fecha);
+                        if (fechaSeleccionada < fechaActual) {
+                            Swal.showValidationMessage('La fecha debe ser igual o posterior a hoy');
+                            return false;
+                        }
+
                         return {
                             sillas: sillas,
+                            fecha: fecha,
                             horaInicio: horaInicio,
                             horaFin: horaFin
                         };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        form.num_sillas.value = result.value.sillas;
-                        
-                        // Agregar campos ocultos para las horas
+                        console.log('Datos a enviar:', {
+                            sillas: result.value.sillas,
+                            fecha: result.value.fecha,
+                            horaInicio: result.value.horaInicio,
+                            horaFin: result.value.horaFin
+                        });
+
+                        // Agregar campos ocultos para fecha y horas
+                        const fechaInput = document.createElement('input');
+                        fechaInput.type = 'hidden';
+                        fechaInput.name = 'fecha_reserva';
+                        fechaInput.value = result.value.fecha;
+                        form.appendChild(fechaInput);
+
                         const horaInicioInput = document.createElement('input');
                         horaInicioInput.type = 'hidden';
                         horaInicioInput.name = 'hora_inicio';
@@ -204,6 +225,14 @@ try {
                         horaFinInput.name = 'hora_fin';
                         horaFinInput.value = result.value.horaFin;
                         form.appendChild(horaFinInput);
+
+                        // Verificar que los campos se han añadido correctamente
+                        console.log('Formulario antes de enviar:', {
+                            fecha: form.fecha_reserva.value,
+                            horaInicio: form.hora_inicio.value,
+                            horaFin: form.hora_fin.value,
+                            sillas: form.num_sillas.value
+                        });
 
                         form.submit();
                     }
@@ -246,6 +275,7 @@ try {
                     }
                 });
             }
+
             if (typeof errorStock !== 'undefined' && errorStock) {
                 Swal.fire({
                     title: "No disponemos de sillas!",
@@ -267,14 +297,6 @@ try {
                     title: "Mesa Desocupada!",
                     text: "La mesa ha sido desocupada exitosamente!",
                     icon: "success",
-                    confirmButtonText: "Aceptar"
-                });
-            }
-            if (typeof errorMessage !== 'undefined') {
-                Swal.fire({
-                    title: "Error",
-                    text: errorMessage,
-                    icon: "error",
                     confirmButtonText: "Aceptar"
                 });
             }
