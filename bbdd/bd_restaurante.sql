@@ -64,6 +64,10 @@ ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8
 COLLATE = utf8_unicode_ci;
 
+ALTER TABLE historial 
+ADD COLUMN hora_reserva_inicio TIME,
+ADD COLUMN hora_reserva_fin TIME;
+
 -- CREACIÓN FOREIGN KEYS
 -- FOREIGN KEYS TABLA HISTORIAL
 ALTER TABLE

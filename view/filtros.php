@@ -1,8 +1,8 @@
 <?php
 session_start();
 if (!isset($_SESSION['id_camarero'])) {
-  header('Location: ../index.php');
-  exit();
+    header('Location: ../index.php');
+    exit();
 }
 require_once '../procesos/conexion.php';
 require_once "../procesos/filtros.php";
@@ -68,12 +68,16 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Camarero</a>
             <ul class="dropdown-menu">
               <?php
-              $sqlCamarero = "SELECT * FROM camarero";
-              $resultCamarero = mysqli_query($conn, $sqlCamarero);
-              while ($fila = mysqli_fetch_array($resultCamarero)) {
-                $idCamarero = htmlspecialchars($fila['id_camarero']);
-                $nomCamarero = htmlspecialchars($fila['nombre']);
-                echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?camarero={$idCamarero}'>$nomCamarero</a></li>";
+              try {
+                  $sqlCamarero = "SELECT * FROM camarero";
+                  $stmtCamarero = $conn->query($sqlCamarero);
+                  while ($fila = $stmtCamarero->fetch(PDO::FETCH_ASSOC)) {
+                      $idCamarero = htmlspecialchars($fila['id_camarero']);
+                      $nomCamarero = htmlspecialchars($fila['nombre']);
+                      echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?camarero={$idCamarero}'>$nomCamarero</a></li>";
+                  }
+              } catch(PDOException $e) {
+                  error_log("Error al obtener camareros: " . $e->getMessage());
               }
               ?>
             </ul>
@@ -82,12 +86,16 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Tipo de sala</a>
             <ul class="dropdown-menu">
               <?php
-              $sqlNumTipoSala = 'SELECT * FROM tipo_Sala';
-              $resultNumTipoSala = mysqli_query($conn, $sqlNumTipoSala);
-              while ($fila = mysqli_fetch_array($resultNumTipoSala)) {
-                $idTipoSala = htmlspecialchars($fila['id_tipoSala']);
-                $nombreTipoSala = htmlspecialchars($fila['tipo_sala']);
-                echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?tipoSala={$idTipoSala}'>$nombreTipoSala</a>";
+              try {
+                  $sqlNumTipoSala = 'SELECT * FROM tipo_Sala';
+                  $stmtTipoSala = $conn->query($sqlNumTipoSala);
+                  while ($fila = $stmtTipoSala->fetch(PDO::FETCH_ASSOC)) {
+                      $idTipoSala = htmlspecialchars($fila['id_tipoSala']);
+                      $nombreTipoSala = htmlspecialchars($fila['tipo_sala']);
+                      echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?tipoSala={$idTipoSala}'>$nombreTipoSala</a>";
+                  }
+              } catch(PDOException $e) {
+                  error_log("Error al obtener tipos de sala: " . $e->getMessage());
               }
               ?>
             </ul>
@@ -95,53 +103,55 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" <?php echo !isset($_SESSION['tipoSala']) ? 'disabled' : ''; ?> href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Salas</a>
             <ul class="dropdown-menu">
+              <?php
+              if (isset($_SESSION['tipoSala'])) {
+                  try {
+                      $tipoSala = htmlspecialchars(trim($_SESSION['tipoSala']), ENT_QUOTES, 'UTF-8');
+                      $sqlSalas = "SELECT * FROM sala WHERE id_tipoSala = ?";
+                      $stmtSalas = $conn->prepare($sqlSalas);
+                      $stmtSalas->execute([$tipoSala]);
+                      
+                      while ($fila = $stmtSalas->fetch(PDO::FETCH_ASSOC)) {
+                          $idSala = htmlspecialchars($fila['id_sala']);
+                          $nombreSala = htmlspecialchars($fila['nombre_sala']);
+                          echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?sala={$idSala}'>$nombreSala</a></li>";
+                      }
+                  } catch(PDOException $e) {
+                      error_log("Error al obtener salas: " . $e->getMessage());
+                  }
+              } else {
+                  echo "<li class='dropdown-item disabled'>Seleccione un tipo de sala primero</li>";
+              }
+              ?>
+            </ul>
           </li>
-          <?php
-          // Comprueba si se ha seleccionado un tipo de sala en la sesión
-          if (isset($_SESSION['tipoSala'])) {
-            $tipoSala = mysqli_real_escape_string($conn, trim($_SESSION['tipoSala']));
-            $sqlSalas = "SELECT * FROM sala WHERE id_tipoSala = ?";
-            $stmtSalas = mysqli_stmt_init($conn);
-            mysqli_stmt_prepare($stmtSalas, $sqlSalas);
-            mysqli_stmt_bind_param($stmtSalas, "i", $tipoSala);
-            mysqli_stmt_execute($stmtSalas);
-            $resultSalas = mysqli_stmt_get_result($stmtSalas);
-            while ($fila = mysqli_fetch_array($resultSalas)) {
-              $idSala = htmlspecialchars($fila['id_sala']);
-              $nombreSala = htmlspecialchars($fila['nombre_sala']);
-              echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?sala={$idSala}'>$nombreSala</a></li>";
-            }
-          } else {
-            echo "<li class='dropdown-item disabled'>Seleccione un tipo de sala primero</li>";
-          }
-          ?>
-        </ul>
-        </li>
 
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle enlace-barra" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Numero Mesa</a>
             <ul class="dropdown-menu scrollable-dropdown">
               <?php
-                if(isset($_SESSION['sala'])){
-                  $sala = mysqli_real_escape_string($conn, trim($_SESSION['sala']));
-                  $sqlMesaS ="SELECT m.id_mesa FROM mesa m INNER JOIN sala s ON m.id_sala = s.id_sala WHERE s.id_sala = ?";
-                  $stmtMesaS = mysqli_stmt_init($conn);
-                  mysqli_stmt_prepare($stmtMesaS, $sqlMesaS);
-                  mysqli_stmt_bind_param($stmtMesaS, "i", $sala);
-                  mysqli_stmt_execute($stmtMesaS);
-                  $resultMesaS = mysqli_stmt_get_result($stmtMesaS);
-                  while($fila = mysqli_fetch_array($resultMesaS)){
-                    $idMesa = htmlspecialchars($fila['id_mesa']);
-                    echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
+              try {
+                  if(isset($_SESSION['sala'])){
+                      $sala = htmlspecialchars(trim($_SESSION['sala']), ENT_QUOTES, 'UTF-8');
+                      $sqlMesaS = "SELECT m.id_mesa FROM mesa m INNER JOIN sala s ON m.id_sala = s.id_sala WHERE s.id_sala = ?";
+                      $stmtMesaS = $conn->prepare($sqlMesaS);
+                      $stmtMesaS->execute([$sala]);
+                      
+                      while($fila = $stmtMesaS->fetch(PDO::FETCH_ASSOC)){
+                          $idMesa = htmlspecialchars($fila['id_mesa']);
+                          echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
+                      }
+                  } else {
+                      $sqlMesas = "SELECT * FROM mesa";
+                      $stmtMesas = $conn->query($sqlMesas);
+                      while($fila = $stmtMesas->fetch(PDO::FETCH_ASSOC)){
+                          $idMesa = htmlspecialchars($fila['id_mesa']);
+                          echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
+                      }
                   }
-                } else {
-                  $sqlMesas = "SELECT * FROM mesa";
-                  $resultMesas = mysqli_query($conn, $sqlMesas);
-                  while($fila = mysqli_fetch_array($resultMesas)){
-                    $idMesa = htmlspecialchars($fila['id_mesa']);
-                    echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
-                  }
-                }
+              } catch(PDOException $e) {
+                  error_log("Error al obtener mesas: " . $e->getMessage());
+              }
               ?>
             </ul>
           </li>
@@ -167,37 +177,40 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
   </nav>
   <?php
   echo "<h1 id=historial>Historial de mesas</h1>";
-  if (mysqli_num_rows($result) > 0) {
-    echo "<table>";
-    echo "<thead>";
-    echo "<tr>";
-    echo "<th>Nombre</th>";
-    echo "<th class='ocultarSala'>Sala</th>";
-    echo "<th id='nombreSala'>Nombre de sala</th>";
-    echo "<th id='numeroMesa'>Número de mesa</th>";
-    echo "<th id='horaIni'>Hora inicio</th>";
-    echo "<th>Hora fin</th>";
-    echo "</tr>";
-    echo "</thead>";
-    echo "<tbody>";
-    while ($fila = mysqli_fetch_assoc($result)) {
-
-      echo "<tr>";
-      echo "<td>" . $fila['nombre'] . "</td>";
-      echo "<td class='ocultarSala'>" . $fila['tipo_sala'] . "</td>";
-      echo "<td>" . $fila['nombre_sala'] . "</td>";
-      echo "<td>" . $fila['id_mesa'] . "</td>";
-      echo "<td>" . $fila['hora_inicio'] . "</td>";
-      echo "<td>" . ($fila['hora_fin'] == '0000-00-00 00:00:00' ? "Pendiente" : $fila['hora_fin']) . "</td>";
-      echo "</tr>";
-    }
-  } else {
-    ?>
-    <p id="noResultado">No hay resultados
-    <?php
+  try {
+      if ($result && $result->rowCount() > 0) {
+          echo "<table>";
+          echo "<thead>";
+          echo "<tr>";
+          echo "<th>Nombre</th>";
+          echo "<th class='ocultarSala'>Sala</th>";
+          echo "<th id='nombreSala'>Nombre de sala</th>";
+          echo "<th id='numeroMesa'>Número de mesa</th>";
+          echo "<th id='horaIni'>Hora inicio</th>";
+          echo "<th>Hora fin</th>";
+          echo "</tr>";
+          echo "</thead>";
+          echo "<tbody>";
+          
+          while ($fila = $result->fetch(PDO::FETCH_ASSOC)) {
+              echo "<tr>";
+              echo "<td>" . htmlspecialchars($fila['nombre']) . "</td>";
+              echo "<td class='ocultarSala'>" . htmlspecialchars($fila['tipo_sala']) . "</td>";
+              echo "<td>" . htmlspecialchars($fila['nombre_sala']) . "</td>";
+              echo "<td>" . htmlspecialchars($fila['id_mesa']) . "</td>";
+              echo "<td>" . htmlspecialchars($fila['hora_inicio']) . "</td>";
+              echo "<td>" . ($fila['hora_fin'] == '0000-00-00 00:00:00' ? "Pendiente" : htmlspecialchars($fila['hora_fin'])) . "</td>";
+              echo "</tr>";
+          }
+          echo "</tbody>";
+          echo "</table>";
+      } else {
+          echo "<p id='noResultado'>No hay resultados</p>";
+      }
+  } catch(PDOException $e) {
+      error_log("Error al mostrar resultados: " . $e->getMessage());
+      echo "<p id='noResultado'>Error al cargar los resultados</p>";
   }
-  echo "</tbody>";
-  echo "</table>";
   ?>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   <script src="../validations/js/filtrosMesas.js"></script>

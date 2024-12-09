@@ -1,22 +1,26 @@
 <?php
 session_start();
 include_once '../procesos/conexion.php';
+
 if (!isset($_SESSION['id_camarero'])) {
     header('Location: ../index.php');
     exit();
 }
+
 if (!isset($_POST['id_tipoSala'])) {
     header('Location: ./index.php');
     exit();
-} else {
-    $id = mysqli_real_escape_string($conn, $_POST['id_tipoSala']);
+}
+
+try {
+    $id = htmlspecialchars(trim($_POST['id_tipoSala']), ENT_QUOTES, 'UTF-8');
+    
     $query = "SELECT * FROM sala WHERE id_tipoSala = ?";
-    $stmtq = mysqli_stmt_init($conn);
-    mysqli_stmt_prepare($stmtq, $query);
-    mysqli_stmt_bind_param($stmtq, "i", $id);
-    mysqli_stmt_execute($stmtq);
-    $result = mysqli_stmt_get_result($stmtq);
-    $user = mysqli_fetch_assoc($result);
+    $stmt = $conn->prepare($query);
+    $stmt->execute([$id]);
+    $result = $stmt;
+    
+    $user = $result->fetch(PDO::FETCH_ASSOC);
 ?>
 
     <!DOCTYPE html>
@@ -41,7 +45,7 @@ if (!isset($_POST['id_tipoSala'])) {
             <div class="row"> <!-- Agregado para crear un nuevo row de Bootstrap -->
 
 <?php
-                $numero = mysqli_num_rows($result);
+                $numero = $result->rowCount();
                 $nuevoNumero = 4;
             switch($numero) {
                 case 1: $nuevoNumero = 6;
@@ -83,7 +87,10 @@ if (!isset($_POST['id_tipoSala'])) {
     </html>
 
 <?php
-    mysqli_stmt_close($stmtq);
-    mysqli_close($conn);
+    $conn = null;
+} catch(PDOException $e) {
+    error_log("Error en tipoSala.php: " . $e->getMessage());
+    header('Location: ../index.php?error=system');
+    exit();
 }
 ?>
