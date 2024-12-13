@@ -8,7 +8,7 @@ try {
         s.nombre_sala,
         tp.tipo_sala,
         r.id_reserva,
-        DATE_FORMAT(r.hora_reserva_inicio, '%d/%m/%Y') as fecha_reserva,
+        DATE_FORMAT(r.fecha_reserva, '%d/%m/%Y') as fecha_reserva,
         DATE_FORMAT(r.hora_reserva_inicio, '%H:%i') as hora_reserva,
         r.nombre_cliente,
         c.nombre as nombre_camarero,
@@ -17,13 +17,14 @@ try {
                 SELECT 1 
                 FROM reservas r2 
                 WHERE r2.id_mesa = m.id_mesa 
+                AND r2.fecha_reserva = CURDATE() 
                 AND NOW() BETWEEN r2.hora_reserva_inicio AND r2.hora_reserva_fin
             ) THEN 'Ocupada'
             WHEN EXISTS (
                 SELECT 1 
                 FROM reservas r3 
                 WHERE r3.id_mesa = m.id_mesa 
-                AND r3.hora_reserva_inicio > NOW()
+                AND r3.fecha_reserva > CURDATE() 
             ) THEN 'Reservada'
             ELSE 'Libre'
         END as estado
@@ -31,7 +32,8 @@ try {
         INNER JOIN sala s ON m.id_sala = s.id_sala 
         INNER JOIN tipo_sala tp ON s.id_tipoSala = tp.id_tipoSala 
         LEFT JOIN reservas r ON m.id_mesa = r.id_mesa
-        LEFT JOIN camarero c ON r.id_camarero = c.id_camarero";
+        LEFT JOIN camarero c ON r.id_camarero = c.id_camarero
+        WHERE (r.fecha_reserva IS NULL OR r.fecha_reserva >= CURDATE())"; // Filtrar reservas pasadas
 
     // Aplicar filtros según los parámetros recibidos
     $whereConditions = [];
@@ -65,11 +67,11 @@ try {
 
     // Añadir condiciones WHERE si existen
     if (!empty($whereConditions)) {
-        $sql_base .= " WHERE " . implode(" AND ", $whereConditions);
+        $sql_base .= " AND " . implode(" AND ", $whereConditions);
     }
 
     // Ordenar resultados
-    $sql_base .= " ORDER BY m.id_mesa ASC, r.hora_reserva_inicio ASC";
+    $sql_base .= " ORDER BY m.id_mesa ASC, r.fecha_reserva ASC";
 
     // Preparar y ejecutar la consulta
     $stmt = $conn->prepare($sql_base);

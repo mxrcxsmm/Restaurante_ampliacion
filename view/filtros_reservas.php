@@ -199,7 +199,7 @@ try {
             echo "<td class='ocultarSala'>" . htmlspecialchars($fila['tipo_sala']) . "</td>";
             echo "<td>" . htmlspecialchars($fila['nombre_sala']) . "</td>";
             echo "<td>" . htmlspecialchars($fila['id_mesa']) . "</td>";
-            echo "<td>" . ($fila['fecha_reserva'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($fila['fecha_reserva'] ?? '-') . "</td>";
             echo "<td>" . ($fila['nombre_cliente'] ?? '-') . "</td>";
             
             // Mostrar estado con color
