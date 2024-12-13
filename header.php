@@ -14,8 +14,11 @@
             <p>Usuario: <?php echo $_SESSION['nombre']?></p>
         </div>
         <div class="cerrarSesion">
-          <a id="bug" href="../view/filtros.php">
-            <button type="submit" class="btn btn-light"  id="cerrarSesion">Filtrar</button>
+        <a id="bug" href="../view/filtros_historial.php">
+            <button type="submit" class="btn btn-light"  id="cerrarSesion">Ocupaciones</button>
+          </a>
+          <a id="bug" href="../view/filtros_reservas.php">
+            <button type="submit" class="btn btn-light"  id="cerrarSesion">Reservas</button>
           </a>
             <a href="../procesos/logout.php">
             <button type="submit" class="btn btn-dark" id="cerrarSesion">Cerrar Sesión</button>

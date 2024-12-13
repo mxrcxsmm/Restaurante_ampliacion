@@ -3,53 +3,81 @@ session_start();
 include_once './conexion.php';
 
 if (isset($_SESSION['id_camarero'])) {
-    // Sanitizar variables de entrada
-    $id_tipoSala = htmlspecialchars(trim($_POST['id_tipoSala']), ENT_QUOTES, 'UTF-8');
-    $idSala = htmlspecialchars(trim($_POST['id_sala']), ENT_QUOTES, 'UTF-8');
-    $idMesa = htmlspecialchars(trim($_POST['id_mesa']), ENT_QUOTES, 'UTF-8');
+    // Escapar variables de entrada
+    $id_tipoSala = trim($_POST['id_tipoSala']);
+    $idSala = trim($_POST['id_sala']);
+    $idMesa = trim($_POST['id_mesa']);
+    $num_sillas = trim($_POST['num_sillas']);
+    $num_sillas_real = trim($_POST['num_sillas_real']);
+
+    $conn->beginTransaction();
 
     try {
-        $conn->beginTransaction();
-
-        // Buscar la reserva activa para esta mesa
-        $sqlBuscarReserva = "SELECT id_historial 
-                            FROM historial 
-                            WHERE id_mesa = ? 
-                            AND fecha_reserva >= CURRENT_DATE
-                            ORDER BY fecha_reserva DESC, hora_reserva_inicio DESC 
-                            LIMIT 1";
-        
-        $stmtBuscar = $conn->prepare($sqlBuscarReserva);
-        $stmtBuscar->execute([$idMesa]);
-        
-        if ($reserva = $stmtBuscar->fetch(PDO::FETCH_ASSOC)) {
-            // Eliminar la reserva
-            $sqlEliminar = "DELETE FROM historial WHERE id_historial = ?";
-            $stmtEliminar = $conn->prepare($sqlEliminar);
-            $stmtEliminar->execute([$reserva['id_historial']]);
-
-            // Actualizar estado de la mesa a libre
-            $sqlMesa = "UPDATE mesa SET libre = 0 WHERE id_mesa = ?";
-            $stmtMesa = $conn->prepare($sqlMesa);
-            $stmtMesa->execute([$idMesa]);
-
-            $conn->commit();
-            $_SESSION['successDesocupat'] = true;
-        } else {
-            $_SESSION['error'] = "No se encontró una reserva activa para esta mesa";
+        // Consulta para obtener el stock de sillas
+        $sqlRestaStock = "SELECT * FROM stock";
+        $stmtRestaStock = $conn->query($sqlRestaStock);
+        $VerificaStock = 0;
+        while ($row = $stmtRestaStock->fetch(PDO::FETCH_ASSOC)) {
+            $VerificaStock = $row['sillas_stock'];
         }
 
-        header("Location: ../view/mesa.php?id_tipoSala=$id_tipoSala&id_sala=$idSala");
-        exit();
+        if ($num_sillas != $num_sillas_real) {
+            // Calculando nuevo stock
+            $nuevoStockSillas = $num_sillas_real - $num_sillas + $VerificaStock;
+            $sqlLimitSillas = "UPDATE stock SET sillas_stock = :nuevoStockSillas";
+            $stmtLimitSillas = $conn->prepare($sqlLimitSillas);
+            $stmtLimitSillas->bindParam(':nuevoStockSillas', $nuevoStockSillas, PDO::PARAM_INT);
+            $stmtLimitSillas->execute();
+        }
 
-    } catch (PDOException $e) {
+        // Actualizando la mesa
+        $sqlMesa = "UPDATE mesa SET libre = :libre, num_sillas = :num_sillas WHERE id_mesa = :id_mesa";
+        $stmtMesa = $conn->prepare($sqlMesa);
+        $reservado = 0;
+        $stmtMesa->bindParam(':libre', $reservado, PDO::PARAM_INT);
+        $stmtMesa->bindParam(':num_sillas', $num_sillas, PDO::PARAM_INT);
+        $stmtMesa->bindParam(':id_mesa', $idMesa, PDO::PARAM_INT);
+        $stmtMesa->execute();
+
+        // Verificando historial
+        $null = '0000-00-00 00:00:00';
+        $sqlIDH = "SELECT * FROM historial WHERE id_mesa = :id_mesa AND hora_fin = :hora_fin";
+        $stmtIDH = $conn->prepare($sqlIDH);
+        $stmtIDH->bindParam(':id_mesa', $idMesa, PDO::PARAM_INT);
+        $stmtIDH->bindParam(':hora_fin', $null, PDO::PARAM_STR);
+        $stmtIDH->execute();
+        $rowIDH = $stmtIDH->fetch(PDO::FETCH_ASSOC);
+        $idH = $rowIDH['id_historial'] ?? null;
+
+        if ($idH) {
+            // Actualizando el historial para marcar la hora de fin
+            $sqlDesocupat = "UPDATE historial SET hora_fin = NOW() WHERE id_mesa = :id_mesa AND id_historial = :id_historial";
+            $stmtDesocupat = $conn->prepare($sqlDesocupat);
+            $stmtDesocupat->bindParam(':id_mesa', $idMesa, PDO::PARAM_INT);
+            $stmtDesocupat->bindParam(':id_historial', $idH, PDO::PARAM_INT);
+            $stmtDesocupat->execute();
+        }
+
+        // Commit de la transacción
+        $conn->commit();
+
+        $_SESSION['successDesocupat'] = true;
+
+        // Redirigir
+        ?>
+        <form action="../view/mesa.php" method="POST" name="formulario">
+            <input type="hidden" name="id_tipoSala" value="<?php echo $id_tipoSala ?>">
+            <input type="hidden" name="id_sala" value="<?php echo $idSala ?>">
+        </form>
+        <script language="JavaScript">
+            document.formulario.submit();
+        </script>
+        <?php
+    } catch (Exception $e) {
+        // Rollback en caso de error
         $conn->rollBack();
-        error_log("Error en desocupar_mesa.php: " . $e->getMessage());
-        $_SESSION['error'] = "Error al cancelar la reserva: " . $e->getMessage();
-        header("Location: ../view/mesa.php?id_tipoSala=$id_tipoSala&id_sala=$idSala");
+        echo "Error: " . $e->getMessage();
         exit();
-    } finally {
-        $conn = null;
     }
 } else {
     header('Location: ../index.php');

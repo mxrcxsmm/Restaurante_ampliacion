@@ -19,8 +19,12 @@
     if(isset($_SESSION['busqueda']) && $_SESSION['busqueda']){
         unset($_SESSION['busqueda']);
     }
-    if(isset($_GET['borrar']) && $_GET['borrar']){
-        header('Location:../view/filtros.php');
+    if(isset($_GET['borrarReservas']) && $_GET['borrarReservas']){
+        header('Location:../view/filtros_reservas.php');
+        exit();
+    }
+    if(isset($_GET['borrarHistorial']) && $_GET['borrarHistorial']){
+        header('Location:../view/filtros_historial.php');
         exit();
     }
     if(isset($_GET['salir'])){

@@ -1,0 +1,156 @@
+* {
+    font-family: "Exo", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 16px;
+}
+
+body,
+html {
+    height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+    background-color: #EBFFDB;
+}
+
+header {
+    width: 100vw;
+    height: 12vh;
+    background-color: #bb8756;
+}
+
+p {
+    font-weight: bolder;
+}
+
+#cerrarSesion,
+p {
+    margin: 0 !important;
+}
+
+
+
+.body2 {
+    background-color: #EBFFDB;
+    min-height: 100vh !important;
+    padding: 20px;
+}
+
+#bug {
+    color: #bb8756 !important;
+}
+
+
+/* Estilos para el panel de administración */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.card-header {
+    background-color: #bb8756;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+
+/* Estilos para formularios */
+
+.form-control {
+    height: 40px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.btn {
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: #bb8756;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #a67648;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+}
+
+
+/* Estilos para tablas */
+
+.table {
+    width: 100%;
+    margin-top: 20px;
+    background-color: white;
+    border-radius: 5px;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    padding: 12px;
+    font-weight: 600;
+}
+
+.table td {
+    padding: 12px;
+    vertical-align: middle;
+}
+
+
+/* Títulos */
+
+h1 {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin-bottom: 30px;
+}
+
+h3 {
+    color: #2c3e50;
+    font-size: 1.2rem;
+    margin: 20px 0;
+}
+
+
+/* Responsive */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    .row {
+        margin-bottom: 15px;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}

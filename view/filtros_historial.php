@@ -5,7 +5,7 @@ if (!isset($_SESSION['id_camarero'])) {
     exit();
 }
 require_once '../procesos/conexion.php';
-require_once "../procesos/filtros.php";
+require_once "../procesos/filtros_historial.php";
 $filtrarSalas = isset($_SESSION['tipoSala']);
 ?>
 
@@ -45,7 +45,7 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
   <a href="../procesos/borrarSesiones.php?salir=1">
     <button class="btn btn-danger">Volver</button>
   </a>
-  <a href="../procesos/borrarSesiones.php?borrar=5">
+  <a href="../procesos/borrarSesiones.php?borrarHistorial=6">
     <button class="btn btn-warning">Reiniciar Filtros</button>
   </a>
   </div>
@@ -60,8 +60,8 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle enlace-barra" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Orden de tiempo</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="filtros.php?orden=asc">Más antiguo</a></li>
-              <li><a class="dropdown-item" href="filtros.php?orden=desc">Último</a></li>
+              <li><a class="dropdown-item" href="filtros_historial.php?orden=desc">Más antiguo</a></li>
+              <li><a class="dropdown-item" href="filtros_historial.php?orden=asc">Último</a></li>
             </ul>
           </li>
           <li class="nav-item dropdown">
@@ -74,7 +74,7 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
                   while ($fila = $stmtCamarero->fetch(PDO::FETCH_ASSOC)) {
                       $idCamarero = htmlspecialchars($fila['id_camarero']);
                       $nomCamarero = htmlspecialchars($fila['nombre']);
-                      echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?camarero={$idCamarero}'>$nomCamarero</a></li>";
+                      echo "<li><a class='dropdown-item enlace-barra' href='filtros_historial.php?camarero={$idCamarero}'>$nomCamarero</a></li>";
                   }
               } catch(PDOException $e) {
                   error_log("Error al obtener camareros: " . $e->getMessage());
@@ -92,7 +92,7 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
                   while ($fila = $stmtTipoSala->fetch(PDO::FETCH_ASSOC)) {
                       $idTipoSala = htmlspecialchars($fila['id_tipoSala']);
                       $nombreTipoSala = htmlspecialchars($fila['tipo_sala']);
-                      echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?tipoSala={$idTipoSala}'>$nombreTipoSala</a>";
+                      echo "<li><a class='dropdown-item enlace-barra' href='filtros_historial.php?tipoSala={$idTipoSala}'>$nombreTipoSala</a>";
                   }
               } catch(PDOException $e) {
                   error_log("Error al obtener tipos de sala: " . $e->getMessage());
@@ -114,7 +114,7 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
                       while ($fila = $stmtSalas->fetch(PDO::FETCH_ASSOC)) {
                           $idSala = htmlspecialchars($fila['id_sala']);
                           $nombreSala = htmlspecialchars($fila['nombre_sala']);
-                          echo "<li><a class='dropdown-item enlace-barra' href='filtros.php?sala={$idSala}'>$nombreSala</a></li>";
+                          echo "<li><a class='dropdown-item enlace-barra' href='filtros_historial.php?sala={$idSala}'>$nombreSala</a></li>";
                       }
                   } catch(PDOException $e) {
                       error_log("Error al obtener salas: " . $e->getMessage());
@@ -139,14 +139,14 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
                       
                       while($fila = $stmtMesaS->fetch(PDO::FETCH_ASSOC)){
                           $idMesa = htmlspecialchars($fila['id_mesa']);
-                          echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
+                          echo "<li><a class='dropdown-item' href='filtros_historial.php?mesa=$idMesa'>$idMesa</a></li>";
                       }
                   } else {
                       $sqlMesas = "SELECT * FROM mesa";
                       $stmtMesas = $conn->query($sqlMesas);
                       while($fila = $stmtMesas->fetch(PDO::FETCH_ASSOC)){
                           $idMesa = htmlspecialchars($fila['id_mesa']);
-                          echo "<li><a class='dropdown-item' href='filtros.php?mesa=$idMesa'>$idMesa</a></li>";
+                          echo "<li><a class='dropdown-item' href='filtros_historial.php?mesa=$idMesa'>$idMesa</a></li>";
                       }
                   }
               } catch(PDOException $e) {
@@ -176,41 +176,41 @@ $filtrarSalas = isset($_SESSION['tipoSala']);
     </div>
   </nav>
   <?php
-  echo "<h1 id=historial>Historial de mesas</h1>";
-  try {
-      if ($result && $result->rowCount() > 0) {
-          echo "<table>";
-          echo "<thead>";
-          echo "<tr>";
-          echo "<th>Nombre</th>";
-          echo "<th class='ocultarSala'>Sala</th>";
-          echo "<th id='nombreSala'>Nombre de sala</th>";
-          echo "<th id='numeroMesa'>Número de mesa</th>";
-          echo "<th id='horaIni'>Hora inicio</th>";
-          echo "<th>Hora fin</th>";
-          echo "</tr>";
-          echo "</thead>";
-          echo "<tbody>";
-          
-          while ($fila = $result->fetch(PDO::FETCH_ASSOC)) {
-              echo "<tr>";
-              echo "<td>" . htmlspecialchars($fila['nombre']) . "</td>";
-              echo "<td class='ocultarSala'>" . htmlspecialchars($fila['tipo_sala']) . "</td>";
-              echo "<td>" . htmlspecialchars($fila['nombre_sala']) . "</td>";
-              echo "<td>" . htmlspecialchars($fila['id_mesa']) . "</td>";
-              echo "<td>" . htmlspecialchars($fila['hora_inicio']) . "</td>";
-              echo "<td>" . ($fila['hora_fin'] == '0000-00-00 00:00:00' ? "Pendiente" : htmlspecialchars($fila['hora_fin'])) . "</td>";
-              echo "</tr>";
-          }
-          echo "</tbody>";
-          echo "</table>";
-      } else {
-          echo "<p id='noResultado'>No hay resultados</p>";
-      }
-  } catch(PDOException $e) {
-      error_log("Error al mostrar resultados: " . $e->getMessage());
-      echo "<p id='noResultado'>Error al cargar los resultados</p>";
-  }
+  echo "<h1 id=historial>Historial de ocupaciones</h1>";
+  try {  // Obtener todos los resultados
+    if ($result && count($result) > 0) {  // Contar los resultados
+        echo "<table>";
+        echo "<thead>";
+        echo "<tr>";
+        echo "<th>Nombre</th>";
+        echo "<th class='ocultarSala'>Sala</th>";
+        echo "<th id='nombreSala'>Nombre de sala</th>";
+        echo "<th id='numeroMesa'>Número de mesa</th>";
+        echo "<th id='horaIni'>Hora inicio</th>";
+        echo "<th>Hora fin</th>";
+        echo "</tr>";
+        echo "</thead>";
+        echo "<tbody>";
+
+        foreach ($result as $fila) {
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($fila['nombre']) . "</td>";
+            echo "<td class='ocultarSala'>" . htmlspecialchars($fila['tipo_sala']) . "</td>";
+            echo "<td>" . htmlspecialchars($fila['nombre_sala']) . "</td>";
+            echo "<td>" . htmlspecialchars($fila['id_mesa']) . "</td>";
+            echo "<td>" . htmlspecialchars($fila['hora_inicio']) . "</td>";
+            echo "<td>" . ($fila['hora_fin'] == '0000-00-00 00:00:00' ? "Pendiente" : htmlspecialchars($fila['hora_fin'])) . "</td>";
+            echo "</tr>";
+        }
+        echo "</tbody>";
+        echo "</table>";
+    } else {
+        echo "<p id='noResultado'>No hay resultados</p>";
+    }
+} catch (PDOException $e) {
+    error_log("Error al mostrar resultados: " . $e->getMessage());
+    echo "<p id='noResultado'>Error al cargar los resultados</p>";
+}
   ?>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   <script src="../validations/js/filtrosMesas.js"></script>

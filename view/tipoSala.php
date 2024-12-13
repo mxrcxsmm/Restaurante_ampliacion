@@ -14,14 +14,24 @@ if (!isset($_POST['id_tipoSala'])) {
 
 try {
     $id = htmlspecialchars(trim($_POST['id_tipoSala']), ENT_QUOTES, 'UTF-8');
-    
-    $query = "SELECT * FROM sala WHERE id_tipoSala = ?";
+
+    // Preparar la consulta
+    $query = "SELECT * FROM sala WHERE id_tipoSala = :id_tipoSala";
     $stmt = $conn->prepare($query);
-    $stmt->execute([$id]);
-    $result = $stmt;
-    
-    $user = $result->fetch(PDO::FETCH_ASSOC);
+
+    // Ejecutar la consulta con parámetros
+    $stmt->execute(['id_tipoSala' => $id]);
+
+    // Obtener el resultado
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($result) {
+        // Procesar el resultado si existe
+    } else {
+        // Manejar el caso donde no hay resultados
+    }
 ?>
+
 
     <!DOCTYPE html>
     <html lang="es">
@@ -45,7 +55,7 @@ try {
             <div class="row"> <!-- Agregado para crear un nuevo row de Bootstrap -->
 
 <?php
-                $numero = $result->rowCount();
+                $numero = count($result);
                 $nuevoNumero = 4;
             switch($numero) {
                 case 1: $nuevoNumero = 6;
@@ -61,7 +71,7 @@ try {
                 case 6: $nuevoNumero = 1;
                 break;
             }
-        foreach ($result as $fila) {
+            foreach ($result as $fila) {
             echo "<div class='col-md-$nuevoNumero mb-4'>"; // Clase Bootstrap para cuatro columnas
             echo "<div class='container_img grow'>";
             // echo "<a href='mesa.php?id=" . $fila['id_tipoSala'] . "'><img src='../img/" . $fila['nombre_sala'] . ".jpg' alt=''></a>";

@@ -3,87 +3,87 @@ session_start();
 include_once './conexion.php';
 
 if (isset($_SESSION['id_camarero'])) {
-    // Sanitizar variables de entrada
-    $id_tipoSala = htmlspecialchars(trim($_POST['id_tipoSala']), ENT_QUOTES, 'UTF-8');
-    $idCamarero = htmlspecialchars(trim($_SESSION['id_camarero']), ENT_QUOTES, 'UTF-8');
-    $idSala = htmlspecialchars(trim($_POST['id_sala']), ENT_QUOTES, 'UTF-8');
-    $idMesa = htmlspecialchars(trim($_POST['id_mesa']), ENT_QUOTES, 'UTF-8');
-    $num_sillas = htmlspecialchars(trim($_POST['num_sillas']), ENT_QUOTES, 'UTF-8');
-    $fecha_reserva = htmlspecialchars(trim($_POST['fecha_reserva']), ENT_QUOTES, 'UTF-8');
-    $hora_inicio = htmlspecialchars(trim($_POST['hora_inicio']), ENT_QUOTES, 'UTF-8');
-    $hora_fin = htmlspecialchars(trim($_POST['hora_fin']), ENT_QUOTES, 'UTF-8');
+    $id_tipoSala = trim($_POST['id_tipoSala']);
+    $idCamarero = trim($_SESSION['id_camarero']);
+    $idSala = trim($_POST['id_sala']);
+    $idMesa = trim($_POST['id_mesa']);
+    $num_sillas = trim($_POST['num_sillas']);
+    $num_sillas_real = trim($_POST['num_sillas_real']);
 
     try {
         $conn->beginTransaction();
 
-        // Verificar si ya existe una reserva para esa mesa en ese horario
-        $sqlVerificar = "SELECT COUNT(*) FROM historial 
-                        WHERE id_mesa = ? 
-                        AND fecha_reserva = ?
-                        AND (
-                            (hora_reserva_inicio BETWEEN ? AND ?) OR
-                            (hora_reserva_fin BETWEEN ? AND ?) OR
-                            (hora_reserva_inicio <= ? AND hora_reserva_fin >= ?)
-                        )";
-        $stmtVerificar = $conn->prepare($sqlVerificar);
-        $stmtVerificar->execute([
-            $idMesa, 
-            $fecha_reserva, 
-            $hora_inicio, 
-            $hora_fin, 
-            $hora_inicio, 
-            $hora_fin, 
-            $hora_inicio, 
-            $hora_fin
-        ]);
+        // Verificar stock
+        $sqlRestaStock = "SELECT sillas_stock FROM stock";
+        $stmtRestaStock = $conn->prepare($sqlRestaStock);
+        $stmtRestaStock->execute();
+        $row = $stmtRestaStock->fetch(PDO::FETCH_ASSOC);
+        $VerificaStock = $row['sillas_stock'];
 
-        if ($stmtVerificar->fetchColumn() > 0) {
-            $_SESSION['error'] = "La mesa ya está reservada para este horario";
-            header("Location: ../view/mesa.php?id_tipoSala=$id_tipoSala&id_sala=$idSala");
-            exit();
+        if ($VerificaStock >= ($num_sillas - 2)) {
+            // Actualizar el stock si el número de sillas cambia
+            if ($num_sillas != $num_sillas_real) {
+                if ($num_sillas > $num_sillas_real) {
+                    // Si se aumenta el número de sillas, resta el stock
+                    $nuevoStockSillas = $VerificaStock - ($num_sillas - $num_sillas_real);
+                } else {
+                    // Si se reduce el número de sillas, suma el stock
+                    $nuevoStockSillas = $VerificaStock + ($num_sillas_real - $num_sillas);
+                }
+
+                $sqlLimitSillas = "UPDATE stock SET sillas_stock = :nuevoStockSillas";
+                $stmtLimitSillas = $conn->prepare($sqlLimitSillas);
+                $stmtLimitSillas->bindParam(':nuevoStockSillas', $nuevoStockSillas, PDO::PARAM_INT);
+                $stmtLimitSillas->execute();
+            }
+
+            // Actualizar mesa
+            $sqlMesa = "UPDATE mesa SET libre = :reservado, num_sillas = :num_sillas WHERE id_mesa = :id_mesa";
+            $stmtMesa = $conn->prepare($sqlMesa);
+            $reservado = 1;
+            $stmtMesa->bindParam(':reservado', $reservado, PDO::PARAM_INT);
+            $stmtMesa->bindParam(':num_sillas', $num_sillas, PDO::PARAM_INT);
+            $stmtMesa->bindParam(':id_mesa', $idMesa, PDO::PARAM_INT);
+            $stmtMesa->execute();
+
+            // Insertar en historial
+            $sqlHistorial = "INSERT INTO historial (id_camarero, id_mesa, hora_inicio) VALUES (:id_camarero, :id_mesa, NOW())";
+            $stmtHistorial = $conn->prepare($sqlHistorial);
+            $stmtHistorial->bindParam(':id_camarero', $idCamarero, PDO::PARAM_INT);
+            $stmtHistorial->bindParam(':id_mesa', $idMesa, PDO::PARAM_INT);
+            $stmtHistorial->execute();
+
+            // Confirmar transacción
+            $conn->commit();
+
+            $_SESSION['errorStock'] = false;
+            $_SESSION['successOcupat'] = true;
+        } else {
+            $_SESSION['errorStock'] = true;
+?>
+            <form action="../view/mesa.php" method="POST" name="formulario">
+                <input type="hidden" name="id_tipoSala" value="<?php echo $id_tipoSala ?>">
+                <input type="hidden" name="id_sala" value="<?php echo $idSala ?>">
+            </form>
+            <script language="JavaScript">
+                document.formulario.submit();
+            </script>
+        <?php
         }
 
-        // Insertar en historial
-        $sqlOcupat = "INSERT INTO historial (id_camarero, id_mesa, fecha_reserva, hora_reserva_inicio, hora_reserva_fin) 
-                     VALUES (?, ?, ?, ?, ?)";
-        $stmtOcupat = $conn->prepare($sqlOcupat);
-
-        // Debug: ver los valores antes de insertar
-        error_log("Valores a insertar: " . print_r([
-            'id_camarero' => $idCamarero,
-            'id_mesa' => $idMesa,
-            'fecha_reserva' => $fecha_reserva,
-            'hora_inicio' => $hora_inicio,
-            'hora_fin' => $hora_fin
-        ], true));
-
-        $stmtOcupat->execute([
-            $idCamarero,
-            $idMesa,
-            $fecha_reserva,
-            $hora_inicio,
-            $hora_fin
-        ]);
-
-        // Actualizar estado de la mesa
-        $sqlUpdateMesa = "UPDATE mesa SET libre = 1 WHERE id_mesa = ?";
-        $stmtUpdateMesa = $conn->prepare($sqlUpdateMesa);
-        $stmtUpdateMesa->execute([$idMesa]);
-
-        $conn->commit();
-        $_SESSION['successOcupat'] = true;
-
-        header("Location: ../view/mesa.php?id_tipoSala=$id_tipoSala&id_sala=$idSala");
-        exit();
-
-    } catch (PDOException $e) {
+        ?>
+        <form action="../view/mesa.php" method="POST" name="formulario">
+            <input type="hidden" name="id_tipoSala" value="<?php echo $id_tipoSala ?>">
+            <input type="hidden" name="id_sala" value="<?php echo $idSala ?>">
+        </form>
+        <script language="JavaScript">
+            document.formulario.submit();
+        </script>
+<?php
+    } catch (Exception $e) {
         $conn->rollBack();
-        error_log("Error en ocupar_mesa.php: " . $e->getMessage());
-        $_SESSION['error'] = "Error al crear la reserva: " . $e->getMessage();
-        header("Location: ../view/mesa.php?id_tipoSala=$id_tipoSala&id_sala=$idSala");
+        echo "Error: " . $e->getMessage();
         exit();
-    } finally {
-        $conn = null;
     }
 } else {
     header('Location: ../index.php');

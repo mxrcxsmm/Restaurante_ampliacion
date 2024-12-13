@@ -26,8 +26,9 @@ CREATE TABLE `db_restaurante02`.`historial` (
   `id_historial` INT NOT NULL AUTO_INCREMENT,
   `id_camarero` INT NOT NULL,
   `id_mesa` INT NOT NULL,
-  `hora_inicio` DATETIME NOT NULL,
-  `hora_fin` DATETIME NOT NULL,
+  `fecha_reserva` DATE NOT NULL,
+  `hora_reserva_inicio` TIME NOT NULL,
+  `hora_reserva_fin` TIME NOT NULL,
   PRIMARY KEY (`id_historial`)
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8 COLLATE = utf8_unicode_ci;
 
@@ -64,9 +65,19 @@ ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8
 COLLATE = utf8_unicode_ci;
 
-ALTER TABLE historial 
-ADD COLUMN hora_reserva_inicio TIME,
-ADD COLUMN hora_reserva_fin TIME;
+-- CREACIÓN TABLA RESERVAS
+CREATE TABLE `db_restaurante02`.`reservas` (
+  `id_reserva` INT NOT NULL AUTO_INCREMENT,
+  `id_camarero` INT NOT NULL,
+  `id_mesa` INT NOT NULL,
+  `fecha_reserva` DATE NOT NULL,
+  `hora_reserva_inicio` TIME NOT NULL,
+  `hora_reserva_fin` TIME NOT NULL,
+  `nombre_cliente` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`id_reserva`),
+  INDEX `fk_reserva_camarero_idx` (`id_camarero` ASC) VISIBLE,
+  INDEX `fk_reserva_mesa_idx` (`id_mesa` ASC) VISIBLE
+) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8 COLLATE = utf8_general_ci;
 
 -- CREACIÓN FOREIGN KEYS
 -- FOREIGN KEYS TABLA HISTORIAL
@@ -112,13 +123,25 @@ ADD CONSTRAINT `fk_roles_camareros`
   REFERENCES `db_restaurante02`.`roles` (`id_roles`)
   ON DELETE NO ACTION
   ON UPDATE NO ACTION;
+  
+-- CLAVES FORÁNEAS
+ALTER TABLE `db_restaurante02`.`reservas`
+ADD CONSTRAINT `fk_reserva_camarero`
+  FOREIGN KEY (`id_camarero`)
+  REFERENCES `db_restaurante02`.`camarero` (`id_camarero`)
+  ON DELETE CASCADE
+  ON UPDATE CASCADE;
+
+ALTER TABLE `db_restaurante02`.`reservas`
+ADD CONSTRAINT `fk_reserva_mesa`
+  FOREIGN KEY (`id_mesa`)
+  REFERENCES `db_restaurante02`.`mesa` (`id_mesa`)
+  ON DELETE CASCADE
+  ON UPDATE CASCADE;
 
 -- Inserts roles
 INSERT INTO `db_restaurante02`.`roles` (`id_roles`, `tipo_roles`) VALUES ('1', 'Camarero');
 INSERT INTO `db_restaurante02`.`roles` (`id_roles`, `tipo_roles`) VALUES ('2', 'Administrador');
-INSERT INTO `db_restaurante02`.`roles` (`id_roles`, `tipo_roles`) VALUES ('3', 'Mantenimiento');
-INSERT INTO `db_restaurante02`.`roles` (`id_roles`, `tipo_roles`) VALUES ('4', 'Director');
-INSERT INTO `db_restaurante02`.`roles` (`id_roles`, `tipo_roles`) VALUES ('5', 'Gerente');
 
 -- Insert camareros
 -- pwd: asdASD123

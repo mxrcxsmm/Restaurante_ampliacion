@@ -1,0 +1,67 @@
+/* Estilos para estados de mesas */
+
+.estado-ocupada {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.estado-reservada {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.estado-libre {
+    color: #28a745;
+    font-weight: bold;
+}
+
+
+/* Estilos para las cards */
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+
+/* Estilos para las tablas */
+
+.table-responsive {
+    margin-bottom: 1rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+
+/* Estilos para los botones */
+
+.btn-sm {
+    margin: 0 0.25rem;
+}
+
+
+/* Estilos para el contenedor principal */
+
+.container {
+    padding-bottom: 2rem;
+}
+
+
+/* Estilos para el título principal */
+
+.text-center.mb-4 {
+    color: #333;
+    margin-top: 2rem;
+}
